@@ -1,9 +1,16 @@
 const puppeteer = require("puppeteer");
-
 const clearModule = require("clear-module");
+
+// Tell TypeScript to forget all modules previously required.
 clearModule.all();
 
-async function scrapeProducts() {
+interface Product {
+  name: string;
+  price: string;
+  url: string;
+}
+
+async function scrapeProducts(): Promise<void> {
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
 
@@ -16,23 +23,25 @@ async function scrapeProducts() {
   await page.waitForSelector("a.listing-link");
 
   // Extract information about the first 10 products
-  const products = await page.evaluate(() => {
+  const products: Product[] = await page.evaluate(() => {
     const productElements = document.querySelectorAll(
-      ".listing-link.wt-display-inline-block "
+      ".listing-link.wt-display-inline-block"
     );
-    const products = [];
+    const products: Product[] = [];
 
     for (let i = 0; i < Math.min(10, productElements.length); i++) {
-      const product = {};
+      const product: Product = { name: "", price: "", url: "" };
       const element = productElements[i];
 
       // Extract product name
-      product.name = element
-        .querySelector(".wt-text-caption.v2-listing-card__title")
-        .textContent.trim();
+      const nameElement = element.querySelector(
+        ".wt-text-caption.v2-listing-card__title"
+      );
+      if (nameElement) product.name = nameElement.textContent.trim();
 
-      //   // Extract product price
-      product.price = element.querySelector(".lc-price").innerText.trim();
+      // Extract product price
+      const priceElement = element.querySelector(".lc-price");
+      if (priceElement) product.price = priceElement.innerText.trim();
 
       // Extract product URL
       product.url = element.getAttribute("href");
@@ -45,13 +54,8 @@ async function scrapeProducts() {
 
   // Log information about the first 10 products
   console.log(products);
-  //   products.forEach((product, index) => {
-  //     console.log(`Product ${index + 1}:`);
-  //     console.log(`Name: ${product.name}`);
-  //     console.log(`Price: ${product.price}`);
-  //     console.log(`URL: ${product.url}`);
-  //     console.log("---------------------");
-  //   });
+
+  await browser.close();
 }
 
 scrapeProducts();
